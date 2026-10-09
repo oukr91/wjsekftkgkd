@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전달사항 메모장</title>
+  <style>
+    :root {
+      --bg-color: #f3f4f6;
+      --sidebar-bg: #ffffff;
+      --border-color: #e5e7eb;
+      --primary-dark: #111827;
+      --primary-hover: #1f2937;
+      --btn-secondary: #374151;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    /* 사이드바 */
+    .sidebar {
+      width: 320px;
+      background-color: var(--sidebar-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-header h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: var(--primary-dark);
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--primary-dark);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-add:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* 필터 영역 */
+    .filter-box {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .category-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .search-input, .category-select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.875rem;
+    }
+
+    .btn-icon {
+      padding: 0 10px;
+      background-color: #f3f4f6;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background-color: #e5e7eb;
+    }
+
+    .toggle-expired {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      cursor: pointer;
+      user-select: none;
+      margin-top: 2px;
+    }
+
+    .data-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .btn-sm {
+      flex: 1;
+      padding: 6px;
+      font-size: 0.75rem;
+      background-color: #f3f4f6;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--btn-secondary);
+      font-weight: 500;
+    }
+
+    .btn-sm:hover {
+      background-color: #e5e7eb;
+    }
+
+    /* 메모 목록 */
+    .note-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .note-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      background-color: #fff;
+      transition: background 0.15s, opacity 0.2s;
+      user-select: none;
+    }
+
+    .note-item.pinned {
+      background-color: #fffbeb;
+    }
+
+    .note-item.expired {
+      opacity: 0.55;
+      background-color: #f9fafb;
+    }
+
+    .note-item:hover {
+      background-color: #f9fafb;
+    }
+
+    .note-item.pinned:hover {
+      background-color: #fef3c7;
+    }
+
+    .note-item.active {
+      background-color: #f3f4f6;
+      border-left: 4px solid var(--primary-dark);
+    }
+
+    .note-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .note-item-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 170px;
+    }
+
+    .badge-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .badge-dday { background-color: #ef4444; color: white; }
+    .badge-expired { background-color: #9ca3af; color: white; }
+    .badge-upcoming { background-color: #3b82f6; color: white; }
+
+    .note-item-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+
+    /* 우클릭 컨텍스트 메뉴 */
+    .context-menu {
+      position: fixed;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-radius: 6px;
+      padding: 4px 0;
+      z-index: 2000;
+      display: none;
+      min-width: 140px;
+    }
+
+    .context-menu-item {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .context-menu-item:hover { background-color: #f3f4f6; }
+    .context-menu-item.danger { color: #dc2626; }
+
+    .context-menu-divider {
+      height: 1px;
+      background-color: var(--border-color);
+      margin: 4px 0;
+    }
+
+    /* 에디터 영역 */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff;
+    }
+
+    .editor-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .editor-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .editor-header-top input[type="text"] {
+      font-size: 1.3rem;
+      font-weight: bold;
+      border: none;
+      outline: none;
+      flex: 1;
+      color: var(--text-main);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .date-setting-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      background-color: #f9fafb;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      width: fit-content;
+    }
+
+    .date-setting-bar input[type="date"] {
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.78rem;
+      outline: none;
+      color: var(--text-main);
+    }
+
+    .btn-copy-sm {
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background-color: #f9fafb;
+      color: var(--btn-secondary);
+      transition: all 0.15s;
+    }
+
+    .btn-copy-sm:hover { background-color: #e5e7eb; }
+
+    /* 서식 툴바 */
+    .wysiwyg-toolbar {
+      padding: 8px 16px;
+      background-color: #f9fafb;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .tool-btn, .tool-select {
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: #ffffff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tool-btn:hover { background-color: #f3f4f6; }
+
+    .tool-color {
+      width: 30px;
+      height: 30px;
+      padding: 2px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .editor-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .editor-input {
+      width: 100%;
+      min-height: 100%;
+      outline: none;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--text-main);
+      position: relative;
+    }
+
+    .editor-input.drag-over {
+      background-color: #eff6ff;
+      border: 2px dashed #2563eb;
+    }
+
+    .editor-input[contenteditable="true"]:empty:before {
+      content: attr(placeholder);
+      color: #9ca3af;
+    }
+
+    /* ----------------------------------------------------
+       자유 배치 및 자유 조절용 이미지 스타일
+    ---------------------------------------------------- */
+    .img-wrapper {
+      position: absolute;
+      display: inline-block;
+      user-select: none;
+      border: 1px dashed transparent;
+      cursor: move;
+      z-index: 10;
+    }
+
+    .img-wrapper.selected {
+      border-color: #2563eb;
+    }
+
+    .img-wrapper img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+      border-radius: 4px;
+    }
+
+    /* 모서리 핸들 */
+    .resizer {
+      width: 10px;
+      height: 10px;
+      background-color: #2563eb;
+      border: 1px solid white;
+      position: absolute;
+      display: none;
+      z-index: 20;
+    }
+
+    .img-wrapper.selected .resizer {
+      display: block;
+    }
+
+    .resizer.tl { top: -5px; left: -5px; cursor: nwse-resize; }
+    .resizer.tr { top: -5px; right: -5px; cursor: nesw-resize; }
+    .resizer.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    .resizer.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+    /* 이미지 삭제 플로팅 버튼 */
+    .img-delete-btn {
+      position: absolute;
+      top: -28px;
+      right: 0;
+      background-color: #ef4444;
+      color: white;
+      border: none;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .img-wrapper.selected .img-delete-btn {
+      display: block;
+    }
+
+    .editor-footer {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      text-align: right;
+      background-color: #fafafa;
+    }
+
+    .empty-state {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      color: var(--text-sub);
+    }
+
+    /* 모달 기본 스타일 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 360px;
+      max-width: 90%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .modal-header h3 { font-size: 1.1rem; color: var(--text-main); margin-bottom: 12px; }
+
+    .cat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .cat-item input[type="text"] {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    .cat-item input[type="color"] {
+      width: 32px;
+      height: 32px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-sm-danger {
+      padding: 4px 8px;
+      background-color: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn-modal-add {
+      padding: 6px 14px;
+      background-color: var(--primary-dark);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-modal-close {
+      padding: 6px 14px;
+      background-color: #f3f4f6;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--btn-secondary);
+      font-weight: 500;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>📌 전달사항 메모장</h2>
+      <button class="btn-add" onclick="createNote()">+ 새 메모 추가</button>
+    </div>
+
+    <div class="filter-box">
+      <input type="text" id="searchInput" class="search-input" placeholder="검색어 입력..." oninput="renderNoteList()">
+      
+      <div class="category-row">
+        <select id="categoryFilter" class="category-select" onchange="renderNoteList()"></select>
+        <button class="btn-icon" title="카테고리 관리" onclick="openCategoryModal()">⚙️</button>
+      </div>
+
+      <label class="toggle-expired">
+        <input type="checkbox" id="showExpiredToggle" onchange="renderNoteList()" checked>
+        만료된 공지사항 포함해서 보기
+      </label>
+
+      <div class="data-actions">
+        <button class="btn-sm" onclick="exportData()">💾 백업 저장</button>
+        <button class="btn-sm" onclick="importData()">📂 복구하기</button>
+        <input type="file" id="fileInput" style="display:none;" accept=".json" onchange="loadFromFile(event)">
+      </div>
+    </div>
+
+    <div class="note-list" id="noteList"></div>
+  </aside>
+
+  <!-- 우클릭 컨텍스트 메뉴 -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" id="ctxPinBtn" onclick="togglePinFromContext()">📌 상단 고정 / 고정 해제</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item danger" onclick="deleteNoteFromContext()">🗑️ 메모 삭제</div>
+  </div>
+
+  <!-- 메인 에디터 -->
+  <main class="main-content">
+    <div id="editorContainer" style="display: none; height: 100%; flex-direction: column;">
+      
+      <div class="editor-header">
+        <div class="editor-header-top">
+          <input type="text" id="noteTitle" placeholder="제목을 입력하세요" oninput="updateNoteInfo()">
+          <div class="toolbar-actions">
+            <select id="noteCategory" class="category-select" style="width: auto; font-size: 0.8rem; padding: 6px 8px;" onchange="updateNoteInfo()"></select>
+            <button class="btn-copy-sm" onclick="copyContent()">📋 복사</button>
+          </div>
+        </div>
+
+        <div class="date-setting-bar">
+          <span>📅 공지 기간:</span>
+          <input type="date" id="startDate" onchange="updateNoteInfo()">
+          <span>~</span>
+          <input type="date" id="endDate" onchange="updateNoteInfo()">
+        </div>
+      </div>
+
+      <!-- 서식 툴바 -->
+      <div class="wysiwyg-toolbar">
+        <select class="tool-select" onchange="formatDoc('fontName', this.value)">
+          <option value="-apple-system, sans-serif">기본 글씨체</option>
+          <option value="Malgun Gothic">맑은 고딕</option>
+          <option value="Nanum Gothic">나눔 고딕</option>
+          <option value="Batang">바탕체</option>
+          <option value="Courier New">고정폭(코드)</option>
+        </select>
+
+        <select class="tool-select" onchange="formatDoc('fontSize', this.value)">
+          <option value="3">보통 크기</option>
+          <option value="1">작게</option>
+          <option value="5">크게</option>
+          <option value="7">매우 크게</option>
+        </select>
+
+        <button class="tool-btn" onclick="formatDoc('bold')" title="굵게"><b>B</b></button>
+        <button class="tool-btn" onclick="formatDoc('italic')" title="기울임"><i>I</i></button>
+        <button class="tool-btn" onclick="formatDoc('underline')" title="밑줄"><u>U</u></button>
+        <button class="tool-btn" onclick="formatDoc('strikeThrough')" title="취소선"><s>S</s></button>
+
+        <input type="color" class="tool-color" onchange="formatDoc('foreColor', this.value)" title="글자 색상">
+
+        <button class="tool-btn" onclick="formatDoc('insertUnorderedList')" title="글머리 기호">• 목록</button>
+        <button class="tool-btn" onclick="formatDoc('insertOrderedList')" title="번호 목록">1. 목록</button>
+
+        <button class="tool-btn" onclick="document.getElementById('imgFileInput').click()" title="사진 첨부">🖼️ 사진 첨부</button>
+        <input type="file" id="imgFileInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+      </div>
+
+      <div class="editor-body" id="editorBody">
+        <div id="noteContent" class="editor-input" contenteditable="true" placeholder="전달사항 내용 입력 및 사진을 드래그하여 배치하세요..." oninput="updateNoteContent()"></div>
+      </div>
+
+      <div class="editor-footer">
+        <span id="charCount">0 자</span>
+      </div>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+      <p>목록에서 메모를 선택하거나 새 전달사항을 추가하세요.</p>
+    </div>
+  </main>
+
+  <!-- 카테고리 관리 모달 -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📂 카테고리 관리</h3>
+      </div>
+      <div id="categoryManageList"></div>
+      
+      <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn-modal-add" onclick="addCategory()">+ 카테고리 추가</button>
+        <button class="btn-modal-close" onclick="closeCategoryModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 메모 삭제 모달 -->
+  <div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal-content" style="width: 320px; text-align: center;">
+      <h3 style="margin-bottom: 8px; font-size: 1.05rem;">🗑️ 메모 삭제</h3>
+      <p style="font-size: 0.88rem; color: var(--text-sub); margin-bottom: 20px;">이 전달사항을 정말 삭제하시겠습니까?</p>
+      
+      <div style="display: flex; justify-content: center; gap: 8px;">
+        <button class="btn-modal-add" style="background-color: #ef4444;" onclick="confirmDeleteNote()">삭제하기</button>
+        <button class="btn-modal-close" onclick="closeDeleteModal()">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let categories = JSON.parse(localStorage.getItem('notice_categories')) || [
+      { name: '일반', color: '#6b7280' },
+      { name: '긴급', color: '#dc2626' },
+      { name: '업무', color: '#2563eb' },
+      { name: '공지', color: '#059669' }
+    ];
+
+    let notes = JSON.parse(localStorage.getItem('notice_notes_v3')) || [
+      { id: 1, title: '시스템 점검 안내', content: '<b>금요일 오후 10시</b>부터 시스템 점검이 있습니다.', category: '긴급', isPinned: true, startDate: '', endDate: '', updatedAt: new Date().toLocaleDateString() }
+    ];
+
+    let activeNoteId = null;
+    let contextNoteId = null;
+    let selectedImgWrapper = null;
+
+    function saveAll() {
+      localStorage.setItem('notice_categories', JSON.stringify(categories));
+      localStorage.setItem('notice_notes_v3', JSON.stringify(notes));
+    }
+
+    function updateCategoryDropdowns() {
+      const filterSelect = document.getElementById('categoryFilter');
+      const noteSelect = document.getElementById('noteCategory');
+
+      const currentFilter = filterSelect.value;
+      const currentNoteCat = noteSelect.value;
+
+      filterSelect.innerHTML = '<option value="전체">전체 카테고리</option>';
+      noteSelect.innerHTML = '';
+
+      categories.forEach(cat => {
+        filterSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+        noteSelect.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+      });
+
+      filterSelect.value = categories.some(c => c.name === currentFilter) ? currentFilter : '전체';
+      if (currentNoteCat && categories.some(c => c.name === currentNoteCat)) {
+        noteSelect.value = currentNoteCat;
+      }
+    }
+
+    function parseLocalDate(dateStr) {
+      if (!dateStr) return null;
+      const parts = dateStr.split('-');
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function getNoticeStatus(startDateStr, endDateStr) {
+      if (!endDateStr && !startDateStr) return { status: 'normal', badgeText: '', isExpired: false };
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      if (startDateStr) {
+        const start = parseLocalDate(startDateStr);
+        if (start && today < start) return { status: 'upcoming', badgeText: '예정', isExpired: false };
+      }
+
+      if (endDateStr) {
+        const end = parseLocalDate(endDateStr);
+        if (end) {
+          const diffDays = Math.round((end - today) / (1000 * 60 * 60 * 24));
+          if (diffDays < 0) return { status: 'expired', badgeText: '만료', isExpired: true };
+          if (diffDays === 0) return { status: 'dday', badgeText: 'D-Day', isExpired: false };
+          return { status: 'dday', badgeText: `D-${diffDays}`, isExpired: false };
+        }
+      }
+      return { status: 'normal', badgeText: '', isExpired: false };
+    }
+
+    function renderNoteList() {
+      const listEl = document.getElementById('noteList');
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+      const selectedCategory = document.getElementById('categoryFilter').value;
+      const showExpired = document.getElementById('showExpiredToggle').checked;
+
+      listEl.innerHTML = '';
+
+      let filteredNotes = notes.filter(note => {
+        const matchesSearch = note.title.toLowerCase().includes(searchQuery) || note.content.toLowerCase().includes(searchQuery);
+        const matchesCategory = selectedCategory === '전체' || note.category === selectedCategory;
+        const statusInfo = getNoticeStatus(note.startDate, note.endDate);
+
+        if (!showExpired && statusInfo.isExpired) return false;
+        return matchesSearch && matchesCategory;
+      });
+
+      filteredNotes.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+      filteredNotes.forEach(note => {
+        const catInfo = categories.find(c => c.name === note.category) || { color: '#6b7280' };
+        const statusInfo = getNoticeStatus(note.startDate, note.endDate);
+
+        const item = document.createElement('div');
+        item.className = `note-item ${note.isPinned ? 'pinned' : ''} ${statusInfo.isExpired ? 'expired' : ''} ${note.id === activeNoteId ? 'active' : ''}`;
+        item.onclick = () => selectNote(note.id);
+        item.oncontextmenu = (e) => showContextMenu(e, note.id);
+
+        let statusBadgeHtml = '';
+        if (statusInfo.badgeText) {
+          let badgeClass = 'badge-dday';
+          if (statusInfo.status === 'expired') badgeClass = 'badge-expired';
+          if (statusInfo.status === 'upcoming') badgeClass = 'badge-upcoming';
+          statusBadgeHtml = `<span class="badge ${badgeClass}">${statusInfo.badgeText}</span>`;
+        }
+
+        item.innerHTML = `
+          <div class="note-item-header">
+            <span class="note-item-title">${note.isPinned ? '📌 ' : ''}${note.title || '제목 없음'}</span>
+            <div class="badge-group">
+              ${statusBadgeHtml}
+              <span class="badge" style="background-color: ${catInfo.color};">${note.category}</span>
+            </div>
+          </div>
+          <div class="note-item-footer">
+            <span>${note.endDate ? '기한: ' + note.endDate : note.updatedAt}</span>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function showContextMenu(e, id) {
+      e.preventDefault();
+      contextNoteId = id;
+      const menu = document.getElementById('contextMenu');
+      const note = notes.find(n => n.id === id);
+
+      document.getElementById('ctxPinBtn').innerText = note.isPinned ? '📌 상단 고정 해제' : '📌 상단 고정';
+      menu.style.left = `${e.clientX}px`;
+      menu.style.top = `${e.clientY}px`;
+      menu.style.display = 'block';
+    }
+
+    document.addEventListener('click', (e) => {
+      document.getElementById('contextMenu').style.display = 'none';
+      if (!e.target.closest('.img-wrapper')) {
+        deselectImgWrapper();
+      }
+    });
+
+    function togglePinFromContext() {
+      if (!contextNoteId) return;
+      const note = notes.find(n => n.id === contextNoteId);
+      if (note) {
+        note.isPinned = !note.isPinned;
+        saveAll();
+        renderNoteList();
+      }
+    }
+
+    function deleteNoteFromContext() {
+      if (!contextNoteId) return;
+      document.getElementById('deleteConfirmModal').style.display = 'flex';
+    }
+
+    function confirmDeleteNote() {
+      if (!contextNoteId) return;
+      notes = notes.filter(n => n.id !== contextNoteId);
+      if (activeNoteId === contextNoteId) {
+        activeNoteId = null;
+        selectNote(null);
+      }
+      saveAll();
+      renderNoteList();
+      closeDeleteModal();
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteConfirmModal').style.display = 'none';
+      contextNoteId = null;
+    }
+
+    function createNote() {
+      const defaultCat = categories[0] ? categories[0].name : '일반';
+      const newNote = {
+        id: Date.now(),
+        title: '',
+        content: '',
+        category: defaultCat,
+        isPinned: false,
+        startDate: '',
+        endDate: '',
+        updatedAt: new Date().toLocaleDateString()
+      };
+      notes.unshift(newNote);
+      saveAll();
+      selectNote(newNote.id);
+    }
+
+    function selectNote(id) {
+      activeNoteId = id;
+      deselectImgWrapper();
+      const note = notes.find(n => n.id === id);
+
+      if (note) {
+        document.getElementById('editorContainer').style.display = 'flex';
+        document.getElementById('emptyState').style.display = 'none';
+
+        document.getElementById('noteTitle').value = note.title;
+        document.getElementById('noteContent').innerHTML = note.content;
+        document.getElementById('noteCategory').value = note.category;
+        document.getElementById('startDate').value = note.startDate || '';
+        document.getElementById('endDate').value = note.endDate || '';
+
+        updateCharCount();
+        attachImageInteractiveEvents();
+      } else {
+        document.getElementById('editorContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'flex';
+      }
+
+      renderNoteList();
+    }
+
+    function updateNoteInfo() {
+      if (!activeNoteId) return;
+      const note = notes.find(n => n.id === activeNoteId);
+      if (note) {
+        note.title = document.getElementById('noteTitle').value;
+        note.category = document.getElementById('noteCategory').value;
+        note.startDate = document.getElementById('startDate').value;
+        note.endDate = document.getElementById('endDate').value;
+        note.updatedAt = new Date().toLocaleDateString();
+        saveAll();
+        renderNoteList();
+      }
+    }
+
+    function updateNoteContent() {
+      if (!activeNoteId) return;
+      const note = notes.find(n => n.id === activeNoteId);
+      if (note) {
+        note.content = document.getElementById('noteContent').innerHTML;
+        note.updatedAt = new Date().toLocaleDateString();
+        saveAll();
+        updateCharCount();
+      }
+    }
+
+    function formatDoc(cmd, value = null) {
+      document.execCommand(cmd, false, value);
+      updateNoteContent();
+    }
+
+    function updateCharCount() {
+      const text = document.getElementById('noteContent').innerText || '';
+      document.getElementById('charCount').innerText = `${text.trim().length} 자`;
+    }
+
+    /* ========================================================
+       📷 이미지 인터랙션 (자유 이동 & 모서리 드래그 크기 조절)
+    ======================================================== */
+
+    const editorInput = document.getElementById('noteContent');
+
+    function handleImageUpload(e) {
+      const files = e.target.files;
+      if (files && files[0]) {
+        insertImageFile(files[0]);
+      }
+      e.target.value = '';
+    }
+
+    function insertImageFile(file, top = 20, left = 20) {
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드할 수 있습니다.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        createImageWrapperHTML(event.target.result, top, left, 250);
+        updateNoteContent();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function createImageWrapperHTML(src, top, left, width) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'img-wrapper';
+      wrapper.contentEditable = "false";
+      wrapper.style.top = `${top}px`;
+      wrapper.style.left = `${left}px`;
+      wrapper.style.width = `${width}px`;
+
+      wrapper.innerHTML = `
+        <button class="img-delete-btn" onclick="deleteWrapper(this)">🗑️ 삭제</button>
+        <img src="${src}">
+        <div class="resizer tl"></div>
+        <div class="resizer tr"></div>
+        <div class="resizer bl"></div>
+        <div class="resizer br"></div>
+      `;
+
+      editorInput.appendChild(wrapper);
+      attachWrapperEvents(wrapper);
+      selectImgWrapper(wrapper);
+    }
+
+    function deleteWrapper(btn) {
+      const wrapper = btn.closest('.img-wrapper');
+      if (wrapper) {
+        wrapper.remove();
+        deselectImgWrapper();
+        updateNoteContent();
+      }
+    }
+
+    function selectImgWrapper(wrapper) {
+      deselectImgWrapper();
+      selectedImgWrapper = wrapper;
+      selectedImgWrapper.classList.add('selected');
+    }
+
+    function deselectImgWrapper() {
+      if (selectedImgWrapper) {
+        selectedImgWrapper.classList.remove('selected');
+        selectedImgWrapper = null;
+      }
+    }
+
+    // 기존 저장된 이미지 요소들에 이벤트 복원
+    function attachImageInteractiveEvents() {
+      const wrappers = editorInput.querySelectorAll('.img-wrapper');
+      wrappers.forEach(wrapper => {
+        wrapper.contentEditable = "false";
+        attachWrapperEvents(wrapper);
+      });
+    }
+
+    // 이동 및 크기 조절 마우스 이벤트 추가
+    function attachWrapperEvents(wrapper) {
+      wrapper.onclick = (e) => {
+        e.stopPropagation();
+        selectImgWrapper(wrapper);
+      };
+
+      // 위치 이동 드래그 (Free Dragging)
+      wrapper.onmousedown = (e) => {
+        if (e.target.classList.contains('resizer') || e.target.classList.contains('img-delete-btn')) return;
+        
+        selectImgWrapper(wrapper);
+        e.preventDefault();
+
+        let startX = e.clientX;
+        let startY = e.clientY;
+        let startLeft = wrapper.offsetLeft;
+        let startTop = wrapper.offsetTop;
+
+        function onMouseMove(moveEvent) {
+          let dx = moveEvent.clientX - startX;
+          let dy = moveEvent.clientY - startY;
+
+          wrapper.style.left = `${Math.max(0, startLeft + dx)}px`;
+          wrapper.style.top = `${Math.max(0, startTop + dy)}px`;
+        }
+
+        function onMouseUp() {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          updateNoteContent();
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      };
+
+      // 모서리 리사이즈 (Corner Resizing)
+      const resizers = wrapper.querySelectorAll('.resizer');
+      resizers.forEach(resizer => {
+        resizer.onmousedown = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+
+          let startX = e.clientX;
+          let startY = e.clientY;
+          let startWidth = wrapper.offsetWidth;
+          let startLeft = wrapper.offsetLeft;
+          let startTop = wrapper.offsetTop;
+
+          const isLeft = resizer.classList.contains('tl') || resizer.classList.contains('bl');
+          const isTop = resizer.classList.contains('tl') || resizer.classList.contains('tr');
+
+          function onResize(moveEvent) {
+            let dx = moveEvent.clientX - startX;
+            let dy = moveEvent.clientY - startY;
+
+            let newWidth = isLeft ? startWidth - dx : startWidth + dx;
+
+            if (newWidth > 50) {
+              wrapper.style.width = `${newWidth}px`;
+              if (isLeft) wrapper.style.left = `${startLeft + dx}px`;
+            }
+
+            if (isTop) {
+              wrapper.style.top = `${startTop + dy}px`;
+            }
+          }
+
+          function onResizeEnd() {
+            document.removeEventListener('mousemove', onResize);
+            document.removeEventListener('mouseup', onResizeEnd);
+            updateNoteContent();
+          }
+
+          document.addEventListener('mousemove', onResize);
+          document.addEventListener('mouseup', onResizeEnd);
+        };
+      });
+    }
+
+    // 드래그 앤 드롭 파일 업로드
+    editorInput.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      editorInput.classList.add('drag-over');
+    });
+
+    editorInput.addEventListener('dragleave', () => {
+      editorInput.classList.remove('drag-over');
+    });
+
+    editorInput.addEventListener('drop', (e) => {
+      e.preventDefault();
+      editorInput.classList.remove('drag-over');
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const rect = editorInput.getBoundingClientRect();
+        const dropX = e.clientX - rect.left;
+        const dropY = e.clientY - rect.top;
+
+        [...e.dataTransfer.files].forEach(file => {
+          insertImageFile(file, dropX, dropY);
+        });
+      }
+    });
+
+    // 선택된 이미지 Delete 키 삭제
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedImgWrapper) {
+        selectedImgWrapper.remove();
+        deselectImgWrapper();
+        updateNoteContent();
+      }
+    });
+
+    /* 카테고리 관리 모달 */
+    function openCategoryModal() {
+      renderCategoryManageList();
+      document.getElementById('categoryModal').style.display = 'flex';
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').style.display = 'none';
+      updateCategoryDropdowns();
+      renderNoteList();
+    }
+
+    function renderCategoryManageList() {
+      const container = document.getElementById('categoryManageList');
+      container.innerHTML = '';
+
+      categories.forEach((cat, index) => {
+        const div = document.createElement('div');
+        div.className = 'cat-item';
+        div.innerHTML = `
+          <input type="color" value="${cat.color}" onchange="categories[${index}].color = this.value; saveAll();">
+          <input type="text" value="${cat.name}" onchange="updateCategoryName(${index}, this.value)">
+          <button class="btn-sm-danger" onclick="deleteCategory(${index})">삭제</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function addCategory() {
+      categories.push({ name: `새카테고리${categories.length + 1}`, color: '#3b82f6' });
+      saveAll();
+      renderCategoryManageList();
+    }
+
+    function updateCategoryName(index, newName) {
+      const oldName = categories[index].name;
+      categories[index].name = newName;
+      notes.forEach(note => {
+        if (note.category === oldName) note.category = newName;
+      });
+      saveAll();
+    }
+
+    function deleteCategory(index) {
+      if (categories.length <= 1) {
+        alert('최소 1개의 카테고리는 유지되어야 합니다.');
+        return;
+      }
+      const removedName = categories[index].name;
+      categories.splice(index, 1);
+      notes.forEach(note => {
+        if (note.category === removedName) note.category = categories[0].name;
+      });
+      saveAll();
+      renderCategoryManageList();
+    }
+
+    /* 백업 및 데이터 관리 */
+    function copyContent() {
+      const title = document.getElementById('noteTitle').value;
+      const content = document.getElementById('noteContent').innerText;
+      navigator.clipboard.writeText(`[${title}]\n\n${content}`).then(() => {
+        alert('메모가 복사되었습니다.');
+      });
+    }
+
+    function exportData() {
+      const payload = { categories, notes };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload));
+      const anchor = document.createElement('a');
+      anchor.setAttribute("href", dataStr);
+      anchor.setAttribute("download", `메모장_전체백업_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+
+    function importData() {
+      document.getElementById('fileInput').click();
+    }
+
+    function loadFromFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.categories && imported.notes) {
+            categories = imported.categories;
+            notes = imported.notes;
+          }
+          saveAll();
+          updateCategoryDropdowns();
+          renderNoteList();
+          alert('성공적으로 데이터를 불러왔습니다.');
+        } catch (err) {
+          alert('올바르지 않은 JSON 파일 형식입니다.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 초기화
+    updateCategoryDropdowns();
+    renderNoteList();
+  </script>
+</body>
+</html>
